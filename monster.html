@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the monster</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="wrap">
+        <div id="background">
+            <div class="small-btns">
+                <button class="small-btn top-btn btnStyle">▲</button>
+                <div class="samll-btn left-right-btn">
+                    <button class="small-btn left-btn btnStyle">◀</button>
+                    <button class="small-btn right-btn btnStyle">▶</button>
+                </div>
+                <button class="small-btn bottom-btn btnStyle">▼</button>
+            </div>
+            <div class="roundBtn">
+                <button class="saveBtn">SAVE</button>
+            </div>
+            <canvas id="canvas1" width="1100" height="600"></canvas>
+            <canvas id="canvas" width="1100" height="600" class="hidden"></canvas>
+            <div id="gameover" class="hidden">GAME OVER</div>
+            <!-- form 다시 설정 -->
+            <form action="#" method="get">
+                <table>
+                    <tr>
+                        <td>
+                            <input type="text" id="writeId" placeholder="ID를 입력하세요." required>
+                        </td>
+                    </tr>
+                </table>
+                <a href="#"><button id="btn" type=submit value="submit">Start</button></a>
+            </form>
+            <img src="./img/mario1.png" id="maimg" style="display: none;">
+            <img src="./img/mario_mushroom.png" style="display: none;" class="monster">
+            <img src="./img/mario_flower.png" style="display: none;" class="monster">
+            <img src="./img/mario_mushroom_green.png" style="display: none;" class="monster">
+            <img src="./img/present.png" style="display: none;" class="monster">
+            <audio controls autoplay> 
+                <source src="SuperMarioThemeSong.mp3" type="audio/mpeg"> 
+            </audio> 
+            <div id="main-info" class="hidden">
+                <img src="./img/mario.png" alt="" id="player">
+                <p id="level">Level 01</p>
+                <p id="playerId">ID</p>
+                <progress id="level-gauge" data-label="EXP 0/100" value="0" max="100"></progress>
+            </div>
+            <style type="text/css">* {cursor: url(https://cur.cursors-4u.net/cursors/cur-2/cur104.cur), auto !important;}</style><a href="https://www.cursors-4u.com/cursor/2008/11/24/cool-orange-pointer.html" target="_blank" title="Cool Orange Pointer"><img src="https://cur.cursors-4u.net/cursor.png" border="0" alt="Cool Orange Pointer" style="position:absolute; top: 0px; right: 0px;" /></a>
+        </div>
+    </div>
+</body>
+    <script>
+        let canvas1 = document.querySelector('#canvas1');
+        let canvas = document.querySelector('#canvas');
+        let ctx = canvas.getContext('2d');
+        
+        //변수만들기
+        // let mouseCursor = document.querySelector(".cursor");
+        let startBtn = document.querySelector('#btn');
+        let topBtn = document.querySelector('.top-btn');
+        let leftBtn = document.querySelector('.left-btn');
+        let rightBtn = document.querySelector('.right-btn');
+        let bottomBtn = document.querySelector('.bottom-btn');
+        let gameover = document.querySelector('#gameover');
+        let writeId = document.querySelector('#writeId');
+        let mainInfo = document.querySelector('#main-info');
+        let animation;          
+        // let timer = 40;
+        let marioImg = new Image();
+        marioImg.src = "./img/mario1.png";
+        let player = document.querySelector('#player');
+        let levelUp = document.querySelector('#level-gauge');
+        let monImgs = document.querySelectorAll('.monster');
+        let monstersCaught = 0;
+
+        // 마우스커서
+        //-이미지 설정해서 다시하기..!
+        // window.addEventListener("mousemove", cursor);
+        // function cursor(e) {
+        //     mouseCursor.style.left = e.pageX + "px";
+        //     mouseCursor.style.top = e.pageY + "px";
+        // }
+        
+        // start 버튼 누를 때,        
+        startBtn.addEventListener("click", (e) => {
+                gameStart();
+                canvas1.classList.add("hidden");
+                canvas.classList.remove("hidden");
+                gameover.classList.add("hidden");
+                startBtn.classList.add("hidden");
+                player.classList.remove("hidden");
+                mainInfo.classList.remove("hidden");
+                writeId.classList.add("hidden");
+        });   
+
+        // *main-info영역
+        //😢플레이어(게임하단에 마리오 캐릭터)
+        // let player = {
+        //     x: 800,
+        //     y: 10,
+        //     width: 60,
+        //     height: 100,
+        //     drawP() {
+        //         ctx.drawImage(playerImg, this.x, this.y, this.width, this.height);
+        //     }
+        // }
+        // player.drawP();
+        //😢경험치
+        //-> 오르게 수정해야함..ㅠㅠ
+        // function monInfoChange() {
+        //     curObj.exp += (20 - Math.round(this.timeBetweenSteps / 100));  
+        //     // (대충 랜덤지정되는 this.timeBetweenSteps값에 비례하게 경험치(exp)를 준다는 식)
+        //     progress.setAttribute('data-label', `EXP ${curObj.exp}/100`);
+        //     progress.value = curObj.exp;
+        //     if (curObj.exp >= 100) {    // 경험치가 100이되면 레벨업, 경험치 초기화
+        //         curObj.level++;
+        //         levelText.textContent = `Level ${curObj.level}`;
+        //         curObj.exp -= 100;
+        //         progress.setAttribute('data-label', `EXP ${curObj.exp}/100`);
+        //         progress.value = curObj.exp;
+        //     }
+        // }
+
+
+        //캐릭터 객체 만들기
+        let gameU = {
+            x : 500,
+            y : 240,
+            width: 70,
+            height: 90,
+            speed: 3,       // 캐릭터의 이동 속도(초당 픽셀 수)
+            draw() {
+                ctx.drawImage(marioImg, this.x,this.y, this.width,this.height);
+            }
+        }
+        gameU.draw(); 
+
+
+        //몬스터 배열
+        let monArr = [];
+        class Monster {
+            constructor(x,y){
+                this.x = x;
+                this.y = y;
+                this.width = 60;
+                this.height = 60;
+                this.num = Math.floor(Math.random()*4);
+            }
+            draw() {
+                ctx.drawImage(monImgs[this.num],this.x, this.y, this.width, this.height);
+            }
+            
+        }                
+        
+        //캐릭터 키이벤트
+        let keysDown = {};
+        window.addEventListener("keydown", function (key) {
+            keysDown[key.keyCode] = true;
+            // console.log(keysDown);
+            keydown(key);
+        }, false);
+        window.addEventListener("keyup", function (key) {
+            delete keysDown[key.keyCode];
+            keyup(key);
+        }, false);
+
+        let keycode;
+        function keydown(e){
+            //눌러진 key의 코드값
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            keycode = e.keyCode;
+            switch(keycode){
+                case 37:        //left
+                gameU.x += -3 * gameU.speed;         
+                leftBtn.classList.remove("btnStyle");           
+                leftBtn.classList.add("click"); 
+                // console.log('keydown');           
+                    break; 
+                case 38:        //up
+                gameU.y += -3 * gameU.speed;
+                topBtn.classList.remove("btnStyle");           
+                topBtn.classList.add("click");  
+                    break; 
+                case 39:        //right
+                gameU.x += 3 * gameU.speed; 
+                rightBtn.classList.remove("btnStyle");           
+                rightBtn.classList.add("click"); 
+                    break; 
+                case 40:        //down
+                gameU.y += 3 * gameU.speed; 
+                bottomBtn.classList.remove("btnStyle");           
+                bottomBtn.classList.add("click"); 
+                    break; 
+            }
+            gameU.draw();
+        }
+        function keyup(e){
+            //떨어진 key의 코드값
+            keycode=e.keyCode;
+            switch(keycode){
+                case 37:            //left
+                leftBtn.classList.remove("click");           
+                leftBtn.classList.add("btnStyle");  
+                // console.log('keyup');      
+                    break;  
+                case 39:            //right
+                rightBtn.classList.remove("click");           
+                rightBtn.classList.add("btnStyle");
+                    break;
+                case 38:            //up
+                topBtn.classList.remove("click");           
+                topBtn.classList.add("btnStyle");
+                    break;
+                case 40:            //down
+                bottomBtn.classList.remove("click");           
+                bottomBtn.classList.add("btnStyle");
+                    break;
+            }
+        }   
+
+        var time = 40; 
+        var finished = false;
+        var times =function(){
+            time=time-1;        //1초씩 감소!
+            // 0초가 되면 -> 캐릭터, 몬스터 hide! + 게임오버 문구 뜨게!!
+                if (time <= 0)
+                {
+                // stop the timer
+                clearInterval(times);
+                // set game to finished
+                finished = true;
+                time=0;
+                gameover.classList.remove("hidden");
+                cancelAnimationFrame(animation);
+                gameU.width = 0;
+                }
+        }
+        // 타이머 간격(매 1초 (1000ms))
+        setInterval(times, 1000);
+
+        //*게임시작(animation)
+        let monsterCon=true;
+        let mon;
+        function gameStart(){           
+            animation = requestAnimationFrame(gameStart);
+            // timer = timer-1;
+            // contex.clearRect(0,0,window.innerWidth,window.innerHeight);
+            // 몬스터 랜덤하게 위치하게! 
+            if(monsterCon){
+                mon = new Monster( ( 60+(Math.random()*(canvas.width-120))), (60 +(Math.random()*(canvas.height-120))) );
+                console.log(mon);
+                monsterCon=false;
+            }
+            //😢한 판당 몬스터가..계속 같은 애들만 나옴!
+            mon.draw();
+            gameU.draw();
+            catchCheck(gameU, mon);
+            // display 시간 
+            ctx.fillStyle = "rgb(250, 250, 250)";
+            ctx.font = "24px Helveticas";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "top";
+            ctx.fillText("Monsters caught: " + monstersCaught, 20, 30);
+            //😢시간이 자꾸 이상하게..맨 처음 숫자가 안사라짐..!
+            ctx.fillText("Time: " + time, 20, 100);
+            // game over message 뜨게!!
+            if(finished==true){
+                ctx.fillText("Game over!", 200, 240);
+            }
+        };
+
+        // 캐릭터가 몬스터 잡으면 캐릭터, 몬스터 위치 reset
+        let reset = function () {
+            //캐릭터 캔버스 중앙에(position to center of canvas)
+            gameU.x = canvas.width / 2;
+            gameU.y = canvas.height / 2;
+            //몬스터 랜덤하게 위치(on the canvas randomly)
+            mon.x = 60 + (Math.random() * (canvas.width - 120));
+            mon.y = 60 + (Math.random() * (canvas.height - 120));
+        };
+        //캐릭터와 몬스터가 만나면(잡으면)
+        //😢캐릭터 사이즈업!(몬스터이미지4번(인덱스3) 만날 때)
+        // function charSize(){
+        //     gameU.width = 75;
+        //     gameU.height = 95;
+        // }
+        //충돌체크 - 충돌하면 캐릭터와 몬스터 reset됨!
+        function catchCheck(gameU, mon){
+            if (
+                gameU.x <= (mon.x + 60)
+                && mon.x <= (gameU.x + 70)
+                && gameU.y <= (mon.y + 60)
+                && mon.y <= (gameU.y + 90)
+                ) {
+                ++monstersCaught;
+                // cancelAnimationFrame(animation);
+                reset();
+            //😢수정
+            // if(monImgs[3]){
+            //     setInterval(charSize(),5000);
+            // }
+            }
+        }
+    </script>
+</html>
